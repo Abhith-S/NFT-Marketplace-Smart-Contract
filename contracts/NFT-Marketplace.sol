@@ -149,4 +149,158 @@ contract NFTMarketplace is ERC721URIStorage{
 
     }
 
+    //fn to purchase nft
+    function createMarketSale(uint _tokenId)public payable{
+
+        //get price of nft from mapping
+
+        uint price = idMarketItem[_tokenId].price;
+
+        //ensure enough money send to buy
+        require(msg.value == price, "Please send the asking price of nft to complete the sale");
+
+        //change nft owner 
+        idMarketItem[_tokenId].owner = payable(msg.sender);
+
+        //change sold state
+        idMarketItem[_tokenId].sold = true;
+
+        //set owner to 0 address
+        idMarketItem[_tokenId].owner = payable(address(0));
+
+        //imcrement sold count
+        itemsSold.increment();
+
+        //transfer nft to buyer
+        _transfer(address(this), msg.sender, _tokenId);
+
+        //send listing price to owner ie marketplace creator
+        payable(owner).transfer(listingPrice);
+
+        //send sale price to nft seller
+        payable(idMarketItem[_tokenId].seller).transfer(msg.value);
+
+    }
+
+    //get all unsold nfts
+    //we are reuturnig a struct array of type MarketItem , it was defined above
+    function fetchMarketItem() public view returns(MarketItem[] memory){
+
+        //get total item count
+        uint itemCount = tokenIds.current();
+
+        //get total unsold
+        uint unSoldItemCount =  tokenIds.current() - itemsSold.current();
+
+        //current index, its for the loop
+        uint currentIndex = 0;
+
+        //'items' - struct array of MarketItem type which has all the unsold nfts
+        //we also have to provide a length , which is in unSoldItems
+        MarketItem[] memory items = new MarketItem[](unSoldItemCount);
+
+        for(uint i = 0; i < itemCount; i++){
+
+            //check for nfts that has owner as smartcontract these are the nfts that are not sold
+            if(idMarketItem[i+1].owner == address(this)){
+
+                //for current id
+                uint currentId = i+1;
+
+                //creating a struct of type MarketItem and storing nft at current id to it
+                MarketItem storage currentItem = idMarketItem[currentId];
+                
+                //storing the currentItem to items struct array
+                items[currentIndex] = currentItem;
+
+                //imcrement currentIndex
+                currentIndex++;
+            }
+        }
+        return items;
+
+    }
+
+    //get nfts that u bought
+    function fetchMyNFT() public view returns(MarketItem[] memory){
+
+        //get total count of all nfts
+        uint totalCount = tokenIds.current();
+
+        //for count of nfts onwed by msg.sender
+        uint itemCount = 0;
+        uint currentIndex = 0;
+
+        //loop to find no of nfts owner by msg.sender
+        for (uint i = 0; i < totalCount; i++){
+            if(idMarketItem[i+1].owner == msg.sender){
+                itemCount ++;
+            }
+        }
+
+        //struct array of type MarketItem with a lenth itemCount
+        MarketItem[] memory items = new MarketItem[](itemCount);
+
+        //loop to get each nft owned by msg.sender and store in struct array - 'items'
+        for(uint i = 0; i < totalCount; i++){
+
+            //if msg.sender is owner of nft at index i+1
+            if(idMarketItem[i+1].owner == msg.sender){
+
+                uint currentId = i+1;
+
+                //get the single nft as a struct
+                MarketItem storage currentItem = idMarketItem[currentId];
+
+                //store this single nft to 'items' struct array
+                items[currentIndex] = currentItem;
+
+                //update currentIndex
+                currentIndex++;
+            }
+        }
+        return items;
+    }
+
+    //display details of your nfts that u put on sale
+    function fetchItemsListed() public view returns(MarketItem[] memory){
+
+        //get total count of all nfts
+        uint totalCount = tokenIds.current();
+
+        //for count of nfts onwed by msg.sender
+        uint itemCount = 0;
+        uint currentIndex = 0;
+
+        //loop to find no of nfts owned by msg.sender
+        for (uint i = 0; i < totalCount; i++){
+            if(idMarketItem[i+1].seller == msg.sender){
+                itemCount ++;
+            }
+        }
+
+        //struct array of type MarketItem with a lenth itemCount
+        MarketItem[] memory items = new MarketItem[](itemCount);
+
+        //loop to get each nft owned by msg.sender and store in struct array - 'items'
+        for(uint i = 0; i < totalCount; i++){
+
+            //if msg.sender is owner of nft at index i+1
+            if(idMarketItem[i+1].seller == msg.sender){
+
+                uint currentId = i+1;
+
+                //get the single nft as a struct
+                MarketItem storage currentItem = idMarketItem[currentId];
+
+                //store this single nft to 'items' struct array
+                items[currentIndex] = currentItem;
+
+                //update currentIndex
+                currentIndex++;
+            }
+        }
+        return items;
+    }
+
 }
